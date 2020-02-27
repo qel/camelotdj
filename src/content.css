@@ -15,12 +15,13 @@ p.buk-track-labels div:last-child {
 
 div.key-select {
     position: absolute;
-    right: 0.8rem;
-    margin-top: 0.8rem;
+    right: 1.5rem;
+    margin-top: 1rem;
     width: 480px;
     height: 48px;
     background-color: #141414;
-    border-radius: 0.3rem;
+    border-radius: 0.5rem;
+    box-shadow: 4px -2px 0.5px 1.5px rgba(0, 48, 0, 0.5); /* x | y | blur | spread | color */
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
