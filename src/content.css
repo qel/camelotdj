@@ -13,11 +13,39 @@ p.buk-track-labels div:last-child {
     text-align: right;
 }
 
-div.key-select {
+div.key-container {
     position: absolute;
     right: 1.5rem;
+    padding-top: 0;
     margin-top: 1rem;
-    width: 480px;
+    display: flex;
+}
+
+div.key-label {
+    height: fit-content;
+    padding-top: 0;
+    margin-top: 0.35rem;
+    padding-left: 0.6rem;
+    margin-right: 0.4rem;
+    background-color: #26262680;
+    border-radius: 0.5rem 0.5rem 0 0;
+    color: #fff;
+    text-shadow: 4px -2px 0.5px #141414; /* x | y | blur | spread | color */
+    font-size: 1.25rem;
+    font-weight: 300;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #94d500;
+}
+
+div.key-label span {
+    margin-left: 0.1rem;
+    font-size: 1.55rem;
+    font-weight: 600;
+}
+
+div.key-grid {
+    width: 540px;
     height: 48px;
     background-color: #141414;
     border-radius: 0.5rem;
@@ -25,9 +53,10 @@ div.key-select {
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
+    user-select: none;
 }
 
-div.key-select:hover {
+div.key-grid:hover {
     cursor: pointer;
 }
 
@@ -40,11 +69,12 @@ div.key-col {
     font-size: 1.2em;
     font-weight: 700;
     letter-spacing: 1px;
-    width: 2.8rem;
+    width: 3rem;
+    padding-right: 0.2rem;
     text-align: right;
 }
 
-div.key-col:hover {
+div.key-grid div.key-col:hover {
     border-radius: 0.3rem;
     background: #82bc00;
     color: #262626;

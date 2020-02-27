@@ -44,13 +44,22 @@ keyToCamelot = {
 }
 
 // logging
-const myLog = msg => {
-    console.log('CamelotDJ:', msg);
-};
+const myLog = (...args) => console.log.apply(console, ['CamelotDJ:'].concat(args));
 
 // build the key selector
-const keySelectDiv = document.createElement('div');
-keySelectDiv.className = 'key-select';
+const keySelectButtons = [];
+const keySelectContainer = document.createElement('div');
+const keySelectLabel = document.createElement('div');
+const keySelectLabelSpan = document.createElement('span');
+const keySelectGrid = document.createElement('div');
+keySelectContainer.className = 'key-container';
+keySelectLabel.className = 'key-label';
+keySelectGrid.className = 'key-grid';
+keySelectLabel.textContent = 'Camelot';
+keySelectLabelSpan.textContent = 'DJ';
+keySelectLabel.appendChild(keySelectLabelSpan);
+keySelectContainer.appendChild(keySelectLabel);
+keySelectContainer.appendChild(keySelectGrid);
 for (const keyLetter of ['A', 'B']) {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'key-row';
@@ -60,39 +69,40 @@ for (const keyLetter of ['A', 'B']) {
         colDiv.textContent = keyNum + keyLetter;
         colDiv.dataset.keyNum = keyNum;
         colDiv.dataset.minor = keyLetter === 'A';
+        keySelectButtons.push(colDiv);
         rowDiv.appendChild(colDiv);
     }
-    keySelectDiv.appendChild(rowDiv);
+    keySelectGrid.appendChild(rowDiv);
 }
 
-// array of key button elements
-const keyBtn = Array.from(document.getElementsByClassName('key-col'));
-
-// convert key dataset to string
-const keyStr = datasetObj => datasetObj.keyNum + (datasetObj.minor ? 'A' : 'B');
+// convert key dataset to string -- note that the dataset stringifies everything
+const keyStr = datasetObj => datasetObj.keyNum + (datasetObj.minor.toString() === 'true' ? 'A' : 'B');
 
 const selectKey = datasetObj => {
-	// figure out all the keys we need to show
-	const keyNum = datasetObj.keyNum;
-	const minor  = datasetObj.minor;
+    myLog('selectKey()', keyStr(datasetObj));
+
+    // figure out all the keys we need to show
+    const keyNum = parseInt(datasetObj.keyNum);
+	const minor = datasetObj.minor.toString() === 'true';
+	// prettier-ignore
     const showKeys = [
-        { keyNum, minor }, // 8A
-        { keyNum, minor: !minor }, // 8A ->  8B -- flipped major/minor
-        { keyNum: ((keyNum + 10) % 12) + 1, minor }, // 8A ->  7A -- key -1
-        { keyNum: (keyNum % 12) + 1, minor }, // 8A ->  9A -- key +1
+        { keyNum, minor }, 									// 8A
+        { keyNum, minor: !minor },							// 8A ->  8B -- flipped major/minor
+        { keyNum: ((keyNum + 10) % 12) + 1, minor }, 		// 8A ->  7A -- key -1
+        { keyNum: (keyNum % 12) + 1, minor }, 				// 8A ->  9A -- key +1
         { keyNum: ((keyNum + 8) % 12) + 1, minor: !minor }, // 8A ->  5B -- key -3, flipped major/minor
-        { keyNum: ((keyNum + 2) % 12) + 1, minor: !minor } // 8A -> 11B -- key +3, flipped major/minor
+        { keyNum: ((keyNum + 2) % 12) + 1, minor: !minor } 	// 8A -> 11B -- key +3, flipped major/minor
     ].map(k => keyStr(k));
 
-    // apply the correct classes to the buttons
-    for (const btn of keyBtn) {
+	// apply the correct classes to the buttons
+    for (const btn of keySelectButtons) {
         const btnKeyStr = keyStr(btn.dataset);
-        btn.className = 'key-col';
+		btn.className = 'key-col'; // reset all buttons to only the default class
         if (showKeys.includes(btnKeyStr)) {
             if (btnKeyStr === showKeys[0]) {
-                btn.className.add('selected');
+                btn.classList.add('selected');
             } else {
-                btn.className.add('included');
+                btn.classList.add('included');
             }
         }
     }
@@ -104,6 +114,8 @@ const selectKey = datasetObj => {
 };
 
 const update = showKeys => {
+    myLog('update()', showKeys);
+
     // Rewrite the Beatport Hold Bin (or top 40/100, or any track list) to have BPM / Key instead of Label
     const labels = Array.from(
         document.getElementsByClassName('buk-track-labels')
@@ -116,9 +128,11 @@ const update = showKeys => {
         const track = window.Playables.tracks[i];
         const camelot = keyToCamelot[beatportKeyToRekordboxKey[track.key]];
         p.innerHTML = `<div>${track.bpm}</div><div>${camelot}</div>`;
-        if (showKeys.indexOf(camelot) == -1) {
+        if (showKeys && showKeys.indexOf(camelot) == -1) {
             trackList[i].style.display = 'none';
-        }
+        } else {
+            trackList[i].style.display = '';
+		}
     });
 
     // Top 10s
@@ -133,21 +147,35 @@ const update = showKeys => {
         const id = el.parentNode.parentNode.dataset.ecId;
         const track = tracks[id];
         el.style.color = '#fff';
-        el.innerHTML = `<div style="display: inline-block; width: 3rem;">${track.bpm}</div><div style="display: inline-block; width: 3rem; text-align: right;">${keyToCamelot[beatportKeyToRekordboxKey[track.key]]}</div>`;
+        el.innerHTML = `<div style="display: inline-block; width: 3rem;">${
+            track.bpm
+        }</div><div style="display: inline-block; width: 3rem; text-align: right;">${
+            keyToCamelot[beatportKeyToRekordboxKey[track.key]]
+        }</div>`;
     });
 };
 
 const main = () => {
-	document.getElementsByClassName('header-bg-wrap')[0].appendChild(keySelectDiv);
+    // This runs right after DOMContentLoaded, so
+    // - window.Playables.tracks is loaded
+    // - the header wrapper is rendered and we can append our selector thingy
 
-	const keyNum = localStorage.getItem('keyNum');
+    document
+        .getElementsByClassName('header-bg-wrap')[0]
+        .appendChild(keySelectContainer);
+
+    // I don't think there's any reason to wait till now to get our selected key out of storage, though ...
+
+    // Also, we could probably pre-render the selectKey selection
+
+    const keyNum = localStorage.getItem('keyNum');
     const minor = localStorage.getItem('minor');
 
-	// chrome.storage.local.get(['keyNum', 'minor'], store => {
-	//     if (typeof store.keyNum === 'number' && typeof store.minor === 'boolean') {
-	//         selectKey(store);
-	//     }
-	// });
+    // chrome.storage.local.get(['keyNum', 'minor'], store => {
+    //     if (typeof store.keyNum === 'number' && typeof store.minor === 'boolean') {
+    //         selectKey(store);
+    //     }
+    // });
 
     if (typeof keyNum === 'number' && typeof minor === 'boolean') {
         update(selectKey(btn.dataset));
@@ -169,16 +197,24 @@ document.addEventListener('DOMContentLoaded', e => {
 });
 
 const clickHandler = e => {
-    if (this.classList.contains('key-col')) {
-        if (this.classList.contains('selected')) {
+    const clickedClassList = e.target.classList;
+
+    if (clickedClassList.contains('key-col')) {
+        const clickedBtnDataset = e.target.dataset;
+
+        myLog('clickHandler() -- key clicked!', clickedBtnDataset);
+
+		if (clickedClassList.contains('selected')) {
+            myLog('clickHandler() -- the clicked key was already selected');
+
             // we clicked the selected key, so unselect everything
-            for (const btn of keyBtn) {
+            for (const btn of keySelectButtons) {
                 btn.className = 'key-col';
             }
             update(null);
         } else {
             // select the key and update the page
-            update(selectKey(btn.dataset));
+            update(selectKey(clickedBtnDataset));
         }
     }
 };
