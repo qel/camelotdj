@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "manifest_version": 2,
   "description": "Filter Beatport track lists by key.",
+  "short_name": "camelotdj",
   "homepage_url": "http://camelotdj.com",
   "icons": {
     "128": "icons/camelotdj128.png"
