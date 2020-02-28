@@ -7,7 +7,7 @@
 Camelot DJ adds BPM and key (in Camelot notation) to track lists.
 This applies to all Top 100 lists and your Hold Bin.
 
-![Top 100](/screenshot/hold-bin-1280x800.png?raw=true "Top 100 screenshot")
+![Top 100](/screenshot/top100-1400x560.png?raw=true "Top 100 screenshot")
 
 
 
