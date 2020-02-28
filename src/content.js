@@ -1,16 +1,3 @@
-chrome.extension.sendMessage({}, function(response) {
-    var readyStateCheckInterval = setInterval(function() {
-        if (document.readyState === 'complete') {
-            clearInterval(readyStateCheckInterval);
-
-            // ----------------------------------------------------------
-            // This part of the script triggers when page is done loading
-            console.log('Hello. This message was sent from src/content.js');
-            // ----------------------------------------------------------
-        }
-    }, 10);
-});
-
 // prettier-ignore
 beatportKeyToRekordboxKey = {
     'C maj':  'C',                    'C min':  'Cm',
@@ -43,21 +30,33 @@ keyToCamelot = {
     'Dbm': '12A',   'E':  '12B'
 }
 
+// prettier-ignore
+const linkGenres = {
+    'techno':      6,
+    'tech-house':  11,
+    'house':       5,
+    'deep-house':  12,
+    'bass-house':  91,
+    'melodic-h-t': 90,
+    'trance':      7,
+    'indie-dance': 37
+};
+
 // logging
-const myLog = (...args) => console.log.apply(console, ['CamelotDJ:'].concat(args));
+const myLog = (...args) =>
+    console.log.apply(console, ['CamelotDJ:'].concat(args));
 
 // build the key selector
 const keySelectButtons = [];
+const mainContainer = document.createElement('div');
 const keySelectContainer = document.createElement('div');
 const keySelectLabel = document.createElement('div');
-const keySelectLabelSpan = document.createElement('span');
 const keySelectGrid = document.createElement('div');
-keySelectContainer.className = 'key-container';
+mainContainer.className = 'camelotdj-main';
+keySelectContainer.className = 'inner-container';
 keySelectLabel.className = 'key-label';
 keySelectGrid.className = 'key-grid';
-keySelectLabel.textContent = 'Camelot';
-keySelectLabelSpan.textContent = 'DJ';
-keySelectLabel.appendChild(keySelectLabelSpan);
+keySelectLabel.innerHTML = 'Camelot<strong>DJ</strong>';
 keySelectContainer.appendChild(keySelectLabel);
 keySelectContainer.appendChild(keySelectGrid);
 for (const keyLetter of ['A', 'B']) {
@@ -74,17 +73,37 @@ for (const keyLetter of ['A', 'B']) {
     }
     keySelectGrid.appendChild(rowDiv);
 }
+mainContainer.appendChild(keySelectContainer);
+
+// build row of links
+const linkContainer = document.createElement('div');
+const linkLabel = document.createElement('div');
+const linkRow = document.createElement('div');
+linkContainer.className = 'inner-container';
+linkLabel.className = 'link-label';
+linkRow.className = 'link-row';
+linkLabel.innerHTML = 'top<strong>100</strong>s';
+for (const [gName, gNum] of Object.entries(linkGenres)) {
+    const a = document.createElement('a');
+    a.href = `https://www.beatport.com/genre/${gName}/${gNum}/top-100`;
+    a.textContent = gName;
+    linkRow.appendChild(a);
+}
+linkContainer.appendChild(linkLabel);
+linkContainer.appendChild(linkRow);
+mainContainer.appendChild(linkContainer);
 
 // convert key dataset to string -- note that the dataset stringifies everything
-const keyStr = datasetObj => datasetObj.keyNum + (datasetObj.minor.toString() === 'true' ? 'A' : 'B');
+const keyStr = datasetObj =>
+    datasetObj.keyNum + (datasetObj.minor.toString() === 'true' ? 'A' : 'B');
 
 const selectKey = datasetObj => {
     myLog('selectKey()', keyStr(datasetObj));
 
     // figure out all the keys we need to show
     const keyNum = parseInt(datasetObj.keyNum);
-	const minor = datasetObj.minor.toString() === 'true';
-	// prettier-ignore
+    const minor = datasetObj.minor.toString() === 'true';
+    // prettier-ignore
     const showKeys = [
         { keyNum, minor }, 									// 8A
         { keyNum, minor: !minor },							// 8A ->  8B -- flipped major/minor
@@ -94,10 +113,10 @@ const selectKey = datasetObj => {
         { keyNum: ((keyNum + 2) % 12) + 1, minor: !minor } 	// 8A -> 11B -- key +3, flipped major/minor
     ].map(k => keyStr(k));
 
-	// apply the correct classes to the buttons
+    // apply the correct classes to the buttons
     for (const btn of keySelectButtons) {
         const btnKeyStr = keyStr(btn.dataset);
-		btn.className = 'key-col'; // reset all buttons to only the default class
+        btn.className = 'key-col'; // reset all buttons to only the default class
         if (showKeys.includes(btnKeyStr)) {
             if (btnKeyStr === showKeys[0]) {
                 btn.classList.add('selected');
@@ -114,7 +133,7 @@ const selectKey = datasetObj => {
 };
 
 const update = showKeys => {
-    myLog('update()', showKeys);
+    myLog('update() filtering', showKeys);
 
     // Rewrite the Beatport Hold Bin (or top 40/100, or any track list) to have BPM / Key instead of Label
     const labels = Array.from(
@@ -132,7 +151,7 @@ const update = showKeys => {
             trackList[i].style.display = 'none';
         } else {
             trackList[i].style.display = '';
-		}
+        }
     });
 
     // Top 10s
@@ -155,46 +174,72 @@ const update = showKeys => {
     });
 };
 
-const main = () => {
-    // This runs right after DOMContentLoaded, so
-    // - window.Playables.tracks is loaded
-    // - the header wrapper is rendered and we can append our selector thingy
-
+// This fires when our extension initializes the first time -- so we attach our UI to the DOM here
+document.addEventListener('DOMContentLoaded', e => {
+    myLog('DOMContentLoaded fired.');
     document
         .getElementsByClassName('header-bg-wrap')[0]
-        .appendChild(keySelectContainer);
+        .appendChild(mainContainer);
+});
 
-    // I don't think there's any reason to wait till now to get our selected key out of storage, though ...
+const POLLING_INTERVAL = 100;
+const MAX_WAIT_TIME = 15000;
+window.loadWaitTime = 0;
 
-    // Also, we could probably pre-render the selectKey selection
-
-    const keyNum = localStorage.getItem('keyNum');
-    const minor = localStorage.getItem('minor');
-
-    // chrome.storage.local.get(['keyNum', 'minor'], store => {
-    //     if (typeof store.keyNum === 'number' && typeof store.minor === 'boolean') {
-    //         selectKey(store);
-    //     }
-    // });
-
-    if (typeof keyNum === 'number' && typeof minor === 'boolean') {
-        update(selectKey(btn.dataset));
-    }
-};
-
-// window object is sandboxed, so we manually eval the Beatport track data script
-document.addEventListener('DOMContentLoaded', e => {
-    const dataScript = document.getElementById('data-objects');
+// The window object is sandboxed, so we manually eval the Beatport track data script each time a page loads.
+// The webNavigation API only works in the background script, so we have to use messaging to trigger the reload.
+const navigationHandler = (request, sender, sendResponse) => {
+	if (!request.retry) {
+		myLog('Nagivated to', request.navigatedTo);
+	}
+	const dataScript = document.getElementById('data-objects');
     if (dataScript) {
+        if (dataScript.dataset.loaded) {
+            // already loaded this data ... wait for the XHR request and try again
+			window.loadWaitTime += POLLING_INTERVAL;
+			request.retry = 'retry';
+            setTimeout(() => navigationHandler(request), POLLING_INTERVAL);
+            return;
+        }
         eval(dataScript.text);
         if (window.Playables && window.Playables.tracks) {
-            myLog('track eval OK!');
-            main();
+            dataScript.dataset.loaded = 'loaded';
+            myLog(
+                'Track eval OK! --',
+                window.Playables.tracks.length,
+                'tracks loaded after',
+                window.loadWaitTime,
+                'ms.'
+            );
+            window.loadWaitTime = 0;
         } else {
             myLog('Beatport track data not found.');
         }
     }
-});
+    chrome.storage.local.get(['keyNum', 'minor'], store => {
+        if (
+            typeof store.keyNum === 'number' &&
+            typeof store.minor === 'boolean'
+        ) {
+            myLog('retrieved selected key from storage:', store);
+
+            update(selectKey(store));
+            chrome.extension.sendMessage({ key: keyStr(store) });
+        }
+    });
+};
+chrome.runtime.onMessage.addListener(navigationHandler);
+
+// Beatport uses a lot of AJAX, so we poll the current URL to look for psuedo-navigation.
+// This is a whole lot less complicated than trying to see when a new XHR request loads!
+const checkLocation = oldUrl => {
+    const newUrl = window.location.href;
+    if (oldUrl !== newUrl) {
+        navigationHandler({ navigatedTo: newUrl });
+    }
+    setTimeout(checkLocation, POLLING_INTERVAL, newUrl);
+};
+checkLocation(window.location.href);
 
 const clickHandler = e => {
     const clickedClassList = e.target.classList;
@@ -202,19 +247,21 @@ const clickHandler = e => {
     if (clickedClassList.contains('key-col')) {
         const clickedBtnDataset = e.target.dataset;
 
-        myLog('clickHandler() -- key clicked!', clickedBtnDataset);
+        myLog('clickHandler()', clickedBtnDataset);
 
-		if (clickedClassList.contains('selected')) {
-            myLog('clickHandler() -- the clicked key was already selected');
+        if (clickedClassList.contains('selected')) {
+            myLog('clickHandler() -- unselected');
 
             // we clicked the selected key, so unselect everything
             for (const btn of keySelectButtons) {
                 btn.className = 'key-col';
             }
             update(null);
+            chrome.extension.sendMessage({ key: '' });
         } else {
             // select the key and update the page
             update(selectKey(clickedBtnDataset));
+            chrome.extension.sendMessage({ key: keyStr(clickedBtnDataset) });
         }
     }
 };

@@ -1,27 +1,24 @@
 {
   "name": "Camelot DJ",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "manifest_version": 2,
-  "description": "Raquel's amazing Beatport extension",
+  "description": "Filter Beatport track lists by key.",
   "homepage_url": "http://camelotdj.com",
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "128": "icons/camelotdj128.png"
   },
-  "default_locale": "en",
   "background": {
     "scripts": ["src/background.js"],
     "persistent": false
   },
   "browser_action": {
-    "default_icon": "icons/icon19.png",
-    "default_title": "browser action demo",
-    "default_popup": "src/browser_action.html"
+    "default_icon": "icons/cdj38.png",
+    "default_title": "Camelot DJ"
   },
   "permissions": [
     "tabs",
     "storage",
+    "webNavigation",
     "https://www.beatport.com/*"
   ],
   "content_scripts": [

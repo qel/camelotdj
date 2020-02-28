@@ -1,0 +1,1 @@
+zip camelotdj.zip -r . -x "*.DS_Store" -x ".*"
