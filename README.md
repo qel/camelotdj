@@ -2,6 +2,8 @@
 
 **A Chrome estension for Beatport**
 
+Get it in the [Chrome Web Store](https://chrome.google.com/webstore/detail/camelot-dj/odinfabcmlogdpdkghggkkpdjlbeloeg).
+
 
 
 Camelot DJ adds BPM and key (in Camelot notation) to track lists.
