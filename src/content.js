@@ -178,8 +178,6 @@ const update = () => {
         myLog('update() filtering', showKeys);
     }
 
-    const tracks = Object.fromEntries(window.Playables.tracks.map(t => [t.id, t]));
-
     // Top 100s and hold-bin
     Array.from(document.querySelectorAll('.bucket-track-header-col.buk-track-labels')).forEach(labelColumnHeader => {
         labelColumnHeader.innerHTML = '<div>BPM</div><div>KEY</div>';
@@ -189,7 +187,7 @@ const update = () => {
         const trackPlay = trackRow.getElementsByClassName('track-play')[0];
         const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
         const id = trackPlay && trackPlay.dataset && trackPlay.dataset.id;
-        if (trackLabel && id && tracks[id]) {
+        if (trackLabel && id && window.tracks[id]) {
             const {key, bpm} = tracks[id];
             const camelot = keyToCamelot[beatportKeyToRekordboxKey[key]];
             if (showKeys && showKeys.indexOf(camelot) == -1) {
@@ -205,7 +203,7 @@ const update = () => {
     Array.from(document.getElementsByClassName('top-ten-track-label')).forEach(topTenLabel => {
         const rowElement = topTenLabel.parentNode.parentNode;
         const id = rowElement.dataset.ecId;
-        const {key, bpm} = tracks[id];
+        const {key, bpm} = window.tracks[id];
         const camelot = keyToCamelot[beatportKeyToRekordboxKey[key]];
         topTenLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
     });
@@ -220,24 +218,25 @@ const update = () => {
 const checkTrackData = () => {
     // did navigation happen?
     if (window.dataPathname !== window.location.pathname) {
-        // do we have a data script?
-        if ((window.dataScript = document.getElementById('data-objects'))) {
-            // has the new datascript finished loading and replaced the last one we parsed?
-            if (typeof window.dataScript.dataset.parsed === 'undefined') {
-                eval(window.dataScript.text);
-                // eval worked and we have the track data on the window object?
-                if (window.Playables && window.Playables.tracks) {
-                    window.dataScript.dataset.parsed = 'parsed';
-                    myLog('Track eval OK! --', window.Playables.tracks.length, 'tracks loaded.');
-                    const keyNum = window.localStorage.getItem('camelotdj.keyNum');
-                    const minor = window.localStorage.getItem('camelotdj.minor');
-                    if (keyNum && minor) {
-                        selectKey({ keyNum, minor });
-                    } else {
-                        selectKey(null);
-                    }
-                    update();
+        const script = document.getElementById('data-objects');
+        // has the new datascript finished loading and replaced the last one we parsed?
+        if (script && script.dataset && typeof script.dataset.parsed === 'undefined') {
+            const varPos = script.text.indexOf('window.Playables');
+            const eqlPos = script.text.indexOf('=', varPos);
+            const objStr = script.text.slice(eqlPos + 1).split('window.')[0].trim().split(';')[0];
+            window.tracks = Object.fromEntries(JSON.parse(objStr).tracks.map(t => [t.id, t]));
+            // it worked?
+            if (window.tracks) {
+                script.dataset.parsed = 'parsed';
+                myLog(Object.keys(window.tracks).length, 'tracks loaded.');
+                const keyNum = window.localStorage.getItem('camelotdj.keyNum');
+                const minor = window.localStorage.getItem('camelotdj.minor');
+                if (keyNum && minor) {
+                    selectKey({ keyNum, minor });
+                } else {
+                    selectKey(null);
                 }
+                update();
             }
         }
     }
