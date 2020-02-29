@@ -1,27 +1,31 @@
-li.track p.buk-track-labels {
+li.track p.buk-track-labels, li.top-ten-track span.top-ten-track-label {
     color: #fff;
-    font-size: 1.2em;
+    font-size: 1.35rem;
     letter-spacing: 1px;
 }
 
-p.buk-track-labels div {
+p.buk-track-labels div, span.top-ten-track-label div {
     display: inline-block;
     width: 3.8rem;
 }
 
-p.buk-track-labels div:last-child {
+p.buk-track-labels div:last-child, span.top-ten-track-label div:last-child {
     text-align: right;
 }
 
 .camelotdj-main {
     position: absolute;
     right: 0;
-    margin-top: 1rem;
+    margin-top: 0.35rem;
     margin-right: 1.5rem;
 }
 
 div.inner-container {
     display: flex;
+}
+
+div.inner-container:first-child {
+    margin-top: 0.65rem;
 }
 
 a.key-label, div.link-label {

@@ -152,68 +152,65 @@ const update = () => {
     // ['', 'hold-bin']
     // ['', 'genre', 'techno', '6', 'top-100']
     const splitPath = window.location.pathname.split('/');
+    const hide = splitPath[1] !== 'hold-bin' && splitPath[4] !== 'top-100';
 
-    if (splitPath[1] === 'cart') {
-        myLog("update() hiding while we're on the cart page...");
+    // Hide the key selector thingy if we're not on a top-100 or the hold-bin
+    if (hide) {
+        myLog("update() hiding key selector ...");
         keySelectContainer.style.display = 'none';
-        return;
     } else {
         keySelectContainer.style.display = '';
     }
 
-    if (splitPath[1] === 'genre' && splitPath[4] === 'top-100') {
-        for (gNum of Object.keys(genreLinks)) {
-            if (gNum == splitPath[3]) {
-                genreLinks[gNum].className = 'selected';
-            } else {
-                genreLinks[gNum].className = '';
-            }
+    // Set/clear selection class on the top-100 genre link bar
+    for (gNum of Object.keys(genreLinks)) {
+        if (splitPath[1] === 'genre' && splitPath[3] === gNum && splitPath[4] === 'top-100') {
+            genreLinks[gNum].className = 'selected';
+        } else {
+            genreLinks[gNum].className = '';
         }
     }
 
     // Rewrite the Beatport Hold Bin (or top 40/100, or any track list) to have BPM / Key instead of Label
-    const labels = Array.from(document.getElementsByClassName('buk-track-labels'));
-    const header = labels.shift();
     const trackList = Array.from(document.querySelectorAll('li.track'));
-    header.innerHTML = '<div>BPM</div><div>KEY</div>';
 
-    if (window.selectedKey) {
-        const showKeys = [window.selectedKey].concat(window.matchingKeys);
+    let showKeys = null;
+    if (window.selectedKey && !hide) {
+        showKeys = [window.selectedKey].concat(window.matchingKeys);
         myLog('update() filtering', showKeys);
-
-        // Top 100s
-        labels.forEach((p, i) => {
-            const track = window.Playables.tracks[i];
-            // This breaks in the main cart page !!!
-            const camelot = keyToCamelot[beatportKeyToRekordboxKey[track.key]];
-            p.innerHTML = `<div>${track.bpm}</div><div>${camelot}</div>`;
-            if (showKeys && showKeys.indexOf(camelot) == -1) {
-                trackList[i].style.display = 'none';
-            } else {
-                trackList[i].style.display = '';
-            }
-        });
-
-        // Top 10s
-        const tracks = Object.fromEntries(window.Playables.tracks.map(t => [t.id, t]));
-
-        const topLabels = Array.from(document.getElementsByClassName('top-ten-track-label'));
-        topLabels.forEach((el, i) => {
-            const id = el.parentNode.parentNode.dataset.ecId;
-            const track = tracks[id];
-            el.style.color = '#fff';
-            el.innerHTML = `<div style="display: inline-block; width: 3rem;">${
-                track.bpm
-            }</div><div style="display: inline-block; width: 3rem; text-align: right;">${
-                keyToCamelot[beatportKeyToRekordboxKey[track.key]]
-            }</div>`;
-        });
-    } else {
-        // No selected key, so display everything
-        labels.forEach((p, i) => {
-            trackList[i].style.display = '';
-        });
     }
+
+    const tracks = Object.fromEntries(window.Playables.tracks.map(t => [t.id, t]));
+
+    // Top 100s and hold-bin
+    Array.from(document.querySelectorAll('.bucket-track-header-col.buk-track-labels')).forEach(labelColumnHeader => {
+        labelColumnHeader.innerHTML = '<div>BPM</div><div>KEY</div>';
+    });
+    // This is goofy because the hold-bin rows aren't as nested as the Top 100 rows.
+    Array.from(document.getElementsByClassName('bucket-item track')).forEach(trackRow => {
+        const trackPlay = trackRow.getElementsByClassName('track-play')[0];
+        const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
+        const id = trackPlay && trackPlay.dataset && trackPlay.dataset.id;
+        if (trackLabel && id && tracks[id]) {
+            const {key, bpm} = tracks[id];
+            const camelot = keyToCamelot[beatportKeyToRekordboxKey[key]];
+            if (showKeys && showKeys.indexOf(camelot) == -1) {
+                trackRow.style.display = 'none';
+            } else {
+                trackRow.style.display = '';
+                trackLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
+            }
+        }
+    });
+
+    // Top 10s
+    Array.from(document.getElementsByClassName('top-ten-track-label')).forEach(topTenLabel => {
+        const rowElement = topTenLabel.parentNode.parentNode;
+        const id = rowElement.dataset.ecId;
+        const {key, bpm} = tracks[id];
+        const camelot = keyToCamelot[beatportKeyToRekordboxKey[key]];
+        topTenLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
+    });
 };
 
 // Beatport attaches track data to window.Playables.tracks, but the window object is sandboxed.
