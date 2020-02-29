@@ -1,5 +1,5 @@
 // prettier-ignore
-beatportKeyToRekordboxKey = {
+const beatportKeyToRekordboxKey = {
     'C maj':  'C',                    'C min':  'Cm',
     'C♯ maj': 'Db',  'D♭ maj': 'Db',  'C♯ min': 'Dbm', 'D♭ min': 'Dbm',
     'D maj':  'D',                    'D min':  'Dm',
@@ -15,7 +15,7 @@ beatportKeyToRekordboxKey = {
 }
 
 // prettier-ignore
-keyToCamelot = {
+const keyToCamelot = {
     'Abm':  '1A',   'B':   '1B',
     'Ebm':  '2A',   'F#':  '2B',
     'Bbm':  '3A',   'Db':  '3B',
@@ -122,12 +122,12 @@ const selectKey = datasetObj => {
 
         // prettier-ignore
         window.matchingKeys = [
-            { keyNum, minor: !minor },                          // 8A ->  8B -- flipped major/minor
-            { keyNum: ((keyNum + 10) % 12) + 1, minor },        // 8A ->  7A -- key -1
-            { keyNum: (keyNum % 12) + 1, minor },               // 8A ->  9A -- key +1
-            { keyNum: ((keyNum + 8) % 12) + 1, minor: !minor }, // 8A ->  5B -- key -3, flipped major/minor
-            { keyNum: ((keyNum + 2) % 12) + 1, minor: !minor }  // 8A -> 11B -- key +3, flipped major/minor
-        ].map(k => keyStr(k));
+            { add:  0, flip: true  }, // 8A ->  8B -- same key, flipped major/minor
+            { add: 11, flip: false }, // 8A ->  7A -- key -1
+            { add:  1, flip: false }, // 8A ->  9A -- key +1
+            { add:  9, flip: true  }, // 8A ->  5B -- key -3, flipped major/minor
+            { add:  3, flip: true  }  // 8A -> 11B -- key +3, flipped major/minor
+        ].map(x => keyStr({ keyNum: (keyNum + x.add - 1) % 12 + 1, minor: x.flip ? !minor : minor }));
 
         // apply the correct classes to the buttons
         for (const btn of keySelectButtons) {
