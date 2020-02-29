@@ -24,7 +24,7 @@ div.inner-container {
     display: flex;
 }
 
-div.key-label, div.link-label {
+a.key-label, div.link-label {
     padding-left: 0.6rem;
     margin-right: 0.4rem;
     background-color: #26262680;
@@ -36,14 +36,14 @@ div.key-label, div.link-label {
     border-bottom: 1px solid #94d500;
 }
 
-div.key-label {
+a.key-label {
     height: fit-content;
     margin-top: 0.35rem;
     font-size: 1.25rem;
     font-weight: 300;
 }
 
-div.key-label strong {
+a.key-label strong {
     margin-left: 0.1rem;
     font-size: 1.55rem;
     font-weight: 600;
@@ -121,7 +121,10 @@ div.link-row a {
     font-weight: 600;
 }
 
-div.link-row a:hover {
-    text-shadow: 0 0 3px #141414;
+div.link-row a:hover, div.link-row a.selected {
     border-bottom: 1px solid #94d500;
+}
+
+div.link-row a:hover {
+    text-shadow: 0 1px 3px #94d500AA
 }

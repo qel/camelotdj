@@ -42,32 +42,39 @@ const linkGenres = {
     'indie-dance': 37
 };
 
+const HOLD_BIN_URL = 'https://www.beatport.com/hold-bin/tracks?per-page=150';
+
+const POLLING_INTERVAL = 100;
+
 // logging
-const myLog = (...args) =>
-    console.log.apply(console, ['CamelotDJ:'].concat(args));
+const myLog = (...args) => console.log.apply(console, ['CamelotDJ:'].concat(args));
+
+// convert key dataset to string -- note that the dataset stringifies everything
+const keyStr = datasetObj => datasetObj.keyNum + (datasetObj.minor.toString() === 'true' ? 'A' : 'B');
 
 // build the key selector
 const keySelectButtons = [];
 const mainContainer = document.createElement('div');
 const keySelectContainer = document.createElement('div');
-const keySelectLabel = document.createElement('div');
+const keySelectLabel = document.createElement('a');
 const keySelectGrid = document.createElement('div');
 mainContainer.className = 'camelotdj-main';
 keySelectContainer.className = 'inner-container';
 keySelectLabel.className = 'key-label';
 keySelectGrid.className = 'key-grid';
 keySelectLabel.innerHTML = 'Camelot<strong>DJ</strong>';
+keySelectLabel.href = HOLD_BIN_URL;
 keySelectContainer.appendChild(keySelectLabel);
 keySelectContainer.appendChild(keySelectGrid);
-for (const keyLetter of ['A', 'B']) {
+for (const minor of [true, false]) {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'key-row';
     for (let keyNum = 1; keyNum <= 12; keyNum += 1) {
         const colDiv = document.createElement('div');
         colDiv.className = 'key-col';
-        colDiv.textContent = keyNum + keyLetter;
+        colDiv.textContent = keyStr({ keyNum, minor });
         colDiv.dataset.keyNum = keyNum;
-        colDiv.dataset.minor = keyLetter === 'A';
+        colDiv.dataset.minor = minor;
         keySelectButtons.push(colDiv);
         rowDiv.appendChild(colDiv);
     }
@@ -76,6 +83,7 @@ for (const keyLetter of ['A', 'B']) {
 mainContainer.appendChild(keySelectContainer);
 
 // build row of links
+const genreLinks = {};
 const linkContainer = document.createElement('div');
 const linkLabel = document.createElement('div');
 const linkRow = document.createElement('div');
@@ -87,183 +95,180 @@ for (const [gName, gNum] of Object.entries(linkGenres)) {
     const a = document.createElement('a');
     a.href = `https://www.beatport.com/genre/${gName}/${gNum}/top-100`;
     a.textContent = gName;
+    genreLinks[gNum] = a;
     linkRow.appendChild(a);
 }
 linkContainer.appendChild(linkLabel);
 linkContainer.appendChild(linkRow);
 mainContainer.appendChild(linkContainer);
 
-// convert key dataset to string -- note that the dataset stringifies everything
-const keyStr = datasetObj =>
-    datasetObj.keyNum + (datasetObj.minor.toString() === 'true' ? 'A' : 'B');
-
+// Selects a key basted on {keyNum, minor} object and stores matching keys in window.matchingKeys
 const selectKey = datasetObj => {
-    myLog('selectKey()', keyStr(datasetObj));
+    myLog('selectKey()', datasetObj);
 
-    // figure out all the keys we need to show
-    const keyNum = parseInt(datasetObj.keyNum);
-    const minor = datasetObj.minor.toString() === 'true';
-    // prettier-ignore
-    const showKeys = [
-        { keyNum, minor }, 									// 8A
-        { keyNum, minor: !minor },							// 8A ->  8B -- flipped major/minor
-        { keyNum: ((keyNum + 10) % 12) + 1, minor }, 		// 8A ->  7A -- key -1
-        { keyNum: (keyNum % 12) + 1, minor }, 				// 8A ->  9A -- key +1
-        { keyNum: ((keyNum + 8) % 12) + 1, minor: !minor }, // 8A ->  5B -- key -3, flipped major/minor
-        { keyNum: ((keyNum + 2) % 12) + 1, minor: !minor } 	// 8A -> 11B -- key +3, flipped major/minor
-    ].map(k => keyStr(k));
-
-    // apply the correct classes to the buttons
+    // reset all buttons to only the default class
     for (const btn of keySelectButtons) {
-        const btnKeyStr = keyStr(btn.dataset);
-        btn.className = 'key-col'; // reset all buttons to only the default class
-        if (showKeys.includes(btnKeyStr)) {
-            if (btnKeyStr === showKeys[0]) {
+        btn.className = 'key-col';
+    }
+
+    if (datasetObj) {
+        window.selectedKey = keyStr(datasetObj);
+        const keyNum = parseInt(datasetObj.keyNum);
+        const minor = datasetObj.minor.toString() === 'true';
+
+        // put the selection in storage
+        window.localStorage.setItem('camelotdj.keyNum', keyNum);
+        window.localStorage.setItem('camelotdj.minor', minor);
+
+        // prettier-ignore
+        window.matchingKeys = [
+            { keyNum, minor: !minor },                          // 8A ->  8B -- flipped major/minor
+            { keyNum: ((keyNum + 10) % 12) + 1, minor },        // 8A ->  7A -- key -1
+            { keyNum: (keyNum % 12) + 1, minor },               // 8A ->  9A -- key +1
+            { keyNum: ((keyNum + 8) % 12) + 1, minor: !minor }, // 8A ->  5B -- key -3, flipped major/minor
+            { keyNum: ((keyNum + 2) % 12) + 1, minor: !minor }  // 8A -> 11B -- key +3, flipped major/minor
+        ].map(k => keyStr(k));
+
+        // apply the correct classes to the buttons
+        for (const btn of keySelectButtons) {
+            const btnKeyStr = keyStr(btn.dataset);
+            if (btnKeyStr === window.selectedKey) {
                 btn.classList.add('selected');
-            } else {
+            } else if (window.matchingKeys.includes(btnKeyStr)) {
                 btn.classList.add('included');
+            }
+        }
+    } else {
+        window.selectedKey = null;
+
+        // clear stored key
+        window.localStorage.removeItem('camelotdj.keyNum');
+        window.localStorage.removeItem('camelotdj.minor');
+    }
+};
+
+const update = () => {
+    // ['', 'cart', 'cart', 'BaSe64sTuFf==']
+    // ['', 'hold-bin']
+    // ['', 'genre', 'techno', '6', 'top-100']
+    const splitPath = window.location.pathname.split('/');
+
+    if (splitPath[1] === 'cart') {
+        myLog("update() hiding while we're on the cart page...");
+        keySelectContainer.style.display = 'none';
+        return;
+    } else {
+        keySelectContainer.style.display = '';
+    }
+
+    if (splitPath[1] === 'genre' && splitPath[4] === 'top-100') {
+        for (gNum of Object.keys(genreLinks)) {
+            if (gNum == splitPath[3]) {
+                genreLinks[gNum].className = 'selected';
+            } else {
+                genreLinks[gNum].className = '';
             }
         }
     }
 
-    // put the selection in storage
-    chrome.storage.local.set({ keyNum, minor });
-
-    return showKeys;
-};
-
-const update = showKeys => {
-    myLog('update() filtering', showKeys);
-
     // Rewrite the Beatport Hold Bin (or top 40/100, or any track list) to have BPM / Key instead of Label
-    const labels = Array.from(
-        document.getElementsByClassName('buk-track-labels')
-    );
+    const labels = Array.from(document.getElementsByClassName('buk-track-labels'));
     const header = labels.shift();
     const trackList = Array.from(document.querySelectorAll('li.track'));
     header.innerHTML = '<div>BPM</div><div>KEY</div>';
 
-    labels.forEach((p, i) => {
-        const track = window.Playables.tracks[i];
-        const camelot = keyToCamelot[beatportKeyToRekordboxKey[track.key]];
-        p.innerHTML = `<div>${track.bpm}</div><div>${camelot}</div>`;
-        if (showKeys && showKeys.indexOf(camelot) == -1) {
-            trackList[i].style.display = 'none';
-        } else {
+    if (window.selectedKey) {
+        const showKeys = [window.selectedKey].concat(window.matchingKeys);
+        myLog('update() filtering', showKeys);
+
+        // Top 100s
+        labels.forEach((p, i) => {
+            const track = window.Playables.tracks[i];
+            // This breaks in the main cart page !!!
+            const camelot = keyToCamelot[beatportKeyToRekordboxKey[track.key]];
+            p.innerHTML = `<div>${track.bpm}</div><div>${camelot}</div>`;
+            if (showKeys && showKeys.indexOf(camelot) == -1) {
+                trackList[i].style.display = 'none';
+            } else {
+                trackList[i].style.display = '';
+            }
+        });
+
+        // Top 10s
+        const tracks = Object.fromEntries(window.Playables.tracks.map(t => [t.id, t]));
+
+        const topLabels = Array.from(document.getElementsByClassName('top-ten-track-label'));
+        topLabels.forEach((el, i) => {
+            const id = el.parentNode.parentNode.dataset.ecId;
+            const track = tracks[id];
+            el.style.color = '#fff';
+            el.innerHTML = `<div style="display: inline-block; width: 3rem;">${
+                track.bpm
+            }</div><div style="display: inline-block; width: 3rem; text-align: right;">${
+                keyToCamelot[beatportKeyToRekordboxKey[track.key]]
+            }</div>`;
+        });
+    } else {
+        // No selected key, so display everything
+        labels.forEach((p, i) => {
             trackList[i].style.display = '';
+        });
+    }
+};
+
+// Beatport attaches track data to window.Playables.tracks, but the window object is sandboxed.
+// Beatport uses a lot of AJAX, so we can't just load the data script on DOMContentLoaded.
+// Seeing the XHR calls come in requires the tabs permission and a lot of fancy script injection.
+// And we don't want to be re-parsing the data script on an interval just to see when it changed.
+// So we just poll the current URL, and when it changes we parse the data script.
+// We also flag the script element after we parse it so we know if the new one hasn't loaded yet.
+const checkTrackData = () => {
+    // did navigation happen?
+    if (window.dataPathname !== window.location.pathname) {
+        // do we have a data script?
+        if ((window.dataScript = document.getElementById('data-objects'))) {
+            // has the new datascript finished loading and replaced the last one we parsed?
+            if (typeof window.dataScript.dataset.parsed === 'undefined') {
+                eval(window.dataScript.text);
+                // eval worked and we have the track data on the window object?
+                if (window.Playables && window.Playables.tracks) {
+                    window.dataScript.dataset.parsed = 'parsed';
+                    myLog('Track eval OK! --', window.Playables.tracks.length, 'tracks loaded.');
+                    const keyNum = window.localStorage.getItem('camelotdj.keyNum');
+                    const minor = window.localStorage.getItem('camelotdj.minor');
+                    if (keyNum && minor) {
+                        selectKey({ keyNum, minor });
+                    } else {
+                        selectKey(null);
+                    }
+                    update();
+                }
+            }
         }
-    });
-
-    // Top 10s
-    const tracks = Object.fromEntries(
-        window.Playables.tracks.map(t => [t.id, t])
-    );
-
-    const topLabels = Array.from(
-        document.getElementsByClassName('top-ten-track-label')
-    );
-    topLabels.forEach((el, i) => {
-        const id = el.parentNode.parentNode.dataset.ecId;
-        const track = tracks[id];
-        el.style.color = '#fff';
-        el.innerHTML = `<div style="display: inline-block; width: 3rem;">${
-            track.bpm
-        }</div><div style="display: inline-block; width: 3rem; text-align: right;">${
-            keyToCamelot[beatportKeyToRekordboxKey[track.key]]
-        }</div>`;
-    });
+    }
 };
 
 // This fires when our extension initializes the first time -- so we attach our UI to the DOM here
-document.addEventListener('DOMContentLoaded', e => {
+const loadHandler = e => {
     myLog('DOMContentLoaded fired.');
-    document
-        .getElementsByClassName('header-bg-wrap')[0]
-        .appendChild(mainContainer);
-});
+    document.getElementsByClassName('header-bg-wrap')[0].appendChild(mainContainer);
 
-const POLLING_INTERVAL = 100;
-const MAX_WAIT_TIME = 15000;
-window.loadWaitTime = 0;
-
-// The window object is sandboxed, so we manually eval the Beatport track data script each time a page loads.
-// The webNavigation API only works in the background script, so we have to use messaging to trigger the reload.
-const navigationHandler = (request, sender, sendResponse) => {
-	if (!request.retry) {
-		myLog('Nagivated to', request.navigatedTo);
-	}
-	const dataScript = document.getElementById('data-objects');
-    if (dataScript) {
-        if (dataScript.dataset.loaded) {
-            // already loaded this data ... wait for the XHR request and try again
-			window.loadWaitTime += POLLING_INTERVAL;
-			request.retry = 'retry';
-            setTimeout(() => navigationHandler(request), POLLING_INTERVAL);
-            return;
-        }
-        eval(dataScript.text);
-        if (window.Playables && window.Playables.tracks) {
-            dataScript.dataset.loaded = 'loaded';
-            myLog(
-                'Track eval OK! --',
-                window.Playables.tracks.length,
-                'tracks loaded after',
-                window.loadWaitTime,
-                'ms.'
-            );
-            window.loadWaitTime = 0;
-        } else {
-            myLog('Beatport track data not found.');
-        }
-    }
-    chrome.storage.local.get(['keyNum', 'minor'], store => {
-        if (
-            typeof store.keyNum === 'number' &&
-            typeof store.minor === 'boolean'
-        ) {
-            myLog('retrieved selected key from storage:', store);
-
-            update(selectKey(store));
-            chrome.extension.sendMessage({ key: keyStr(store) });
-        }
-    });
+    // Start polling
+    setInterval(checkTrackData, POLLING_INTERVAL);
 };
-chrome.runtime.onMessage.addListener(navigationHandler);
-
-// Beatport uses a lot of AJAX, so we poll the current URL to look for psuedo-navigation.
-// This is a whole lot less complicated than trying to see when a new XHR request loads!
-const checkLocation = oldUrl => {
-    const newUrl = window.location.href;
-    if (oldUrl !== newUrl) {
-        navigationHandler({ navigatedTo: newUrl });
-    }
-    setTimeout(checkLocation, POLLING_INTERVAL, newUrl);
-};
-checkLocation(window.location.href);
+document.addEventListener('DOMContentLoaded', loadHandler);
 
 const clickHandler = e => {
-    const clickedClassList = e.target.classList;
-
-    if (clickedClassList.contains('key-col')) {
-        const clickedBtnDataset = e.target.dataset;
-
-        myLog('clickHandler()', clickedBtnDataset);
-
-        if (clickedClassList.contains('selected')) {
-            myLog('clickHandler() -- unselected');
-
-            // we clicked the selected key, so unselect everything
-            for (const btn of keySelectButtons) {
-                btn.className = 'key-col';
-            }
-            update(null);
-            chrome.extension.sendMessage({ key: '' });
+    const { classList, dataset } = e.target;
+    if (classList.contains('key-col')) {
+        if (classList.contains('selected')) {
+            myLog('clickHandler() un-selected', dataset);
+            selectKey(null);
         } else {
-            // select the key and update the page
-            update(selectKey(clickedBtnDataset));
-            chrome.extension.sendMessage({ key: keyStr(clickedBtnDataset) });
+            myLog('clickHandler() selected', dataset);
+            selectKey(dataset);
         }
+        update();
     }
 };
-
 document.addEventListener('click', clickHandler);
