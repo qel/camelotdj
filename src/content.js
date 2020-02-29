@@ -171,9 +171,7 @@ const update = () => {
         }
     }
 
-    // Rewrite the Beatport Hold Bin (or top 40/100, or any track list) to have BPM / Key instead of Label
-    const trackList = Array.from(document.querySelectorAll('li.track'));
-
+    // We only filter stuff when we're on a top-100 or the hold-bin and we have a key selected
     let showKeys = null;
     if (window.selectedKey && !hide) {
         showKeys = [window.selectedKey].concat(window.matchingKeys);
