@@ -1,0 +1,133 @@
+
+div.title {
+    margin: 0;
+    padding: 0;
+    color: #94d500;
+    font-size: 6rem;
+    font-family: "Source Sans Pro", Arial, sans-serif;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: -0.035em;
+    line-height: 0.975;
+    text-shadow: 4px -2px 0.5px #141414;
+}
+
+div.title strong {
+    color: #fff;
+    font-size: 0.948em;
+    font-weight: 400;
+    text-transform: uppercase;
+}
+
+div.genres {
+    width: fit-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+h1 {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    text-align: left;
+    color: #fff;
+    font-size: 1.8rem;
+    font-family: Oswald, Helvetica, sans-serif;
+    font-weight: 200;
+    text-transform: uppercase;
+}
+
+div.genres > ul {
+    display: flex;
+    flex-direction: column;
+    padding-inline-start: 0;
+    margin-block-start: 0;
+    margin-block-end: 0;    
+}
+
+div.genres > div.header, div.genres > ul > li {
+    padding: 0;
+    display: flex;
+    justify-content: space-around;
+}
+
+div.genres > div.header {
+    width: 100%;
+    border-top: 1px solid #494949;
+    text-transform: uppercase;
+}
+
+div.genres > ul > li {
+    margin: 0.1rem 0;
+    padding: 0.25rem;
+    background-color: #373737;
+}
+
+div.link-col {
+    width: 7em;
+}
+
+div.name-col {
+    width: 20em;
+}
+
+div.number-col {
+    width: 3em;
+}
+
+div.genres > div.header > div, div.genres > ul > li > div {
+    display: inline-block;
+    padding: 0 0.5rem;
+    text-align: left;
+}
+
+
+div {
+    padding: 0.25rem 0;
+    text-align: center;
+}
+
+p {
+    color: #fff;
+    font-size: 1.65rem;
+    font-family: Ubuntu, Arial, sans-serif;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: .02em;    
+    line-height: 1.25;
+}
+
+p strong {
+    /* this should be the same as bold which is inherent to the tag, but I'll put it here for reference */
+    font-weight: 700;
+}
+
+a {
+    font-size: 1.65rem;
+    color: #39c1de;
+    font-family: "Source Sans Pro", Arial, sans-serif;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: .02em;    
+    line-height: 1.25;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+body {
+    width: 100%;
+    margin: 2rem 0 0 0;
+    padding: 0.33rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;    
+    background-color: #262626;
+    color: #fff;
+    font-size: 1.1rem;
+    font-family: "Source Sans Pro", Arial, sans-serif;
+    font-weight: 400;
+}
