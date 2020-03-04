@@ -1,34 +1,18 @@
 // prettier-ignore
-const beatportKeyToRekordboxKey = {
-    'C maj':  'C',                    'C min':  'Cm',
-    'C♯ maj': 'Db',  'D♭ maj': 'Db',  'C♯ min': 'Dbm', 'D♭ min': 'Dbm',
-    'D maj':  'D',                    'D min':  'Dm',
-    'D♯ maj': 'Eb',  'E♭ maj': 'Eb',  'D♯ min': 'Ebm', 'E♭ min': 'Ebm',
-    'E maj':  'E',                    'E min':  'Em',
-    'F maj':  'F',                    'F min':  'Fm',
-    'F♯ maj': 'F#',  'G♭ maj': 'F#',  'F♯ min': 'F#m', 'G♭ min': 'F#m',
-    'G maj':  'G',                    'G min':  'Gm',
-    'G♯ maj': 'Ab',  'A♭ maj': 'Ab',  'G♯ min': 'Abm', 'A♭ min': 'Abm',
-    'A maj':  'A',                    'A min':  'Am',
-    'A♯ maj': 'Bb',  'B♭ maj': 'Bb',  'A♯ min': 'Bbm', 'B♭ min': 'Bbm',
-    'B maj':  'B',                    'B min':  'Bm'
-}
-
-// prettier-ignore
-const keyToCamelot = {
-    'Abm':  '1A',   'B':   '1B',
-    'Ebm':  '2A',   'F#':  '2B',
-    'Bbm':  '3A',   'Db':  '3B',
-    'Fm':   '4A',   'Ab':  '4B',
-    'Cm':   '5A',   'Eb':  '5B',
-    'Gm':   '6A',   'Bb':  '6B',
-    'Dm':   '7A',   'F':   '7B',
-    'Am':   '8A',   'C':   '8B',
-    'Em':   '9A',   'G':   '9B',
-    'Bm':  '10A',   'D':  '10B',
-    'F#m': '11A',   'A':  '11B',
-    'Dbm': '12A',   'E':  '12B'
-}
+const beatportKeyToCamelotKey = {
+    'G♯ min':  '1A',    'A♭ min':  '1A',    'B maj':   '1B',
+    'D♯ min':  '2A',    'E♭ min':  '2A',    'F♯ maj':  '2B',    'G♭ maj':  '2B',
+    'A♯ min':  '3A',    'B♭ min':  '3A',    'C♯ maj':  '3B',    'D♭ maj':  '3B',
+    'F min':   '4A',                        'G♯ maj':  '4B',    'A♭ maj':  '4B',
+    'C min':   '5A',                        'D♯ maj':  '5B',    'E♭ maj':  '5B',
+    'G min':   '6A',                        'A♯ maj':  '6B',    'B♭ maj':  '6B',
+    'D min':   '7A',                        'F maj':   '7B',
+    'A min':   '8A',                        'C maj':   '8B',
+    'E min':   '9A',                        'G maj':   '9B',
+    'B min':  '10A',                        'D maj':  '10B',
+    'F♯ min': '11A',    'G♭ min': '11A',    'A maj':  '11B',
+    'C♯ min': '12A',    'D♭ min': '12A',    'E maj':  '12B'
+};
 
 // prettier-ignore
 const linkGenres = {
@@ -156,7 +140,7 @@ const update = () => {
 
     // Hide the key selector thingy if we're not on a top-100 or the hold-bin
     if (hide) {
-        myLog("update() hiding key selector ...");
+        myLog('update() hiding key selector ...');
         keySelectContainer.style.display = 'none';
     } else {
         keySelectContainer.style.display = '';
@@ -188,8 +172,8 @@ const update = () => {
         const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
         const id = trackPlay && trackPlay.dataset && trackPlay.dataset.id;
         if (trackLabel && id && window.tracks[id]) {
-            const {key, bpm} = tracks[id];
-            const camelot = keyToCamelot[beatportKeyToRekordboxKey[key]];
+            const { key, bpm } = tracks[id];
+            const camelot = beatportKeyToCamelotKey[key];
             if (showKeys && showKeys.indexOf(camelot) == -1) {
                 trackRow.style.display = 'none';
             } else {
@@ -203,9 +187,8 @@ const update = () => {
     Array.from(document.getElementsByClassName('top-ten-track-label')).forEach(topTenLabel => {
         const rowElement = topTenLabel.parentNode.parentNode;
         const id = rowElement.dataset.ecId;
-        const {key, bpm} = window.tracks[id];
-        const camelot = keyToCamelot[beatportKeyToRekordboxKey[key]];
-        topTenLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
+        const { key, bpm } = window.tracks[id];
+        topTenLabel.innerHTML = `<div>${bpm}</div><div>${beatportKeyToCamelotKey[key]}</div>`;
     });
 };
 
@@ -223,7 +206,11 @@ const checkTrackData = () => {
         if (script && script.dataset && typeof script.dataset.parsed === 'undefined') {
             const varPos = script.text.indexOf('window.Playables');
             const eqlPos = script.text.indexOf('=', varPos);
-            const objStr = script.text.slice(eqlPos + 1).split('window.')[0].trim().split(';')[0];
+            const objStr = script.text
+                .slice(eqlPos + 1)
+                .split('window.')[0]
+                .trim()
+                .split(';')[0];
             window.tracks = Object.fromEntries(JSON.parse(objStr).tracks.map(t => [t.id, t]));
             // it worked?
             if (window.tracks) {
