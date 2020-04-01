@@ -208,9 +208,9 @@ const checkTrackData = () => {
             const eqlPos = script.text.indexOf('=', varPos);
             const objStr = script.text
                 .slice(eqlPos + 1)
-                .split('window.')[0]
+                .split('window.')[0]  // cut off the next window variable
                 .trim()
-                .split(';')[0];
+                .slice(0, -1); // remove trailing ;
             window.tracks = Object.fromEntries(JSON.parse(objStr).tracks.map(t => [t.id, t]));
             // it worked?
             if (window.tracks) {
