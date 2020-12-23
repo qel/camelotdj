@@ -43,20 +43,25 @@ const myLog = (...args) => console.log.apply(console, ['CamelotDJ:'].concat(args
 // ['', 'genre', 'techno', '6', 'top-100']
 
 const urlIsTop100 = () => {
-    const splitPath = window.location.pathname.split('/');
-    return splitPath.length >= 5 && splitPath[4] === 'top-100';
+    const sp = window.location.pathname.split('/');
+    return sp.length >= 5 && sp[4] === 'top-100';
 }
 
 const getGenreNum = () => window.location.pathname.split('/')[3];
 
 const urlIsMainCart = () => {
-    const splitPath = window.location.pathname.split('/');
-    return splitPath.length >= 3 && splitPath[1] === 'cart' && splitPath[2] === 'cart';
+    const sp = window.location.pathname.split('/');
+    return sp.length >= 3 && sp[1] === 'cart' && sp[2] === 'cart';
+}
+
+const urlIsCustomCart = () => {
+    const sp = window.location.pathname.split('/');
+    return sp.length >= 3 && sp[1] === 'cart' && sp[2] !== 'cart';
 }
 
 const urlIsHoldBin = () => {
-    const splitPath = window.location.pathname.split('/');
-    return splitPath.length >= 2 && splitPath[1] === 'hold-bin';
+    const sp = window.location.pathname.split('/');
+    return sp.length >= 2 && sp[1] === 'hold-bin';
 }
 
 
@@ -177,13 +182,6 @@ const selectKey = datasetObj => {
 };
 
 const update = () => {
-    // Hide the key selector thingy if we're not on a top-100 or the hold-bin
-    if (urlIsTop100() || urlIsHoldBin()) {
-        keySelectContainer.style.display = '';
-    } else {
-        keySelectContainer.style.display = 'none';
-    }
-
     // Set/clear selection class on the top-100 genre link bar
     for (gNum of Object.keys(genreLinks)) {
         if (urlIsTop100() && getGenreNum() === gNum) {
@@ -193,34 +191,49 @@ const update = () => {
         }
     }
 
-    // We only filter stuff when we're on a top-100 or the hold-bin and we have a key selected
+    // We only filter stuff when we're on a top-100 / hold-bin / custom cart
     let showKeys = null;
-    if (window.selectedKey && (urlIsTop100() || urlIsHoldBin())) {
-        showKeys = [window.selectedKey].concat(window.matchingKeys);
-        myLog('update() filtering', showKeys);
+    if (urlIsTop100() || urlIsHoldBin() || urlIsCustomCart()) {
+        keySelectContainer.style.display = '';
+        myLog('update() key selector visible');
+        if (window.selectedKey) {
+            showKeys = [window.selectedKey].concat(window.matchingKeys);
+            myLog('update() filtering', showKeys);
+        }
+    } else {
+        // Otherwise we hide the key selector thingy
+        keySelectContainer.style.display = 'none';
     }
 
-    // Top 100s and hold-bin
+    // track list headers
     Array.from(document.querySelectorAll('.bucket-track-header-col.buk-track-labels')).forEach(labelColumnHeader => {
         labelColumnHeader.innerHTML = '<div>BPM</div><div>KEY</div>';
     });
-    // This is goofy because the hold-bin rows aren't as nested as the Top 100 rows.
-    Array.from(document.getElementsByClassName('bucket-item track')).forEach(trackRow => {
-        const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
-        const trackPlay  = trackRow.getElementsByClassName('track-play')[0];
-        const trackId    = trackPlay && trackPlay.dataset && trackPlay.dataset.id;
 
-        if (trackLabel && trackId && tracks[trackId]) {
-            const { key, bpm } = tracks[trackId];
-            const camelot = beatportKeyToCamelotKey[key];
+    // Top 100s, carts and hold-bin
+    document.querySelectorAll('ul.bucket-items').forEach(trackList => {
+        // This is goofy because the hold-bin rows aren't as nested as the Top 100 rows.
+        Array.from(trackList.getElementsByClassName('track')).forEach(trackRow => {
+            const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
+            const trackPlay  = trackRow.getElementsByClassName('track-play')[0];
+            const trackId    = trackPlay && trackPlay.dataset && trackPlay.dataset.id;
 
-            if (showKeys && showKeys.indexOf(camelot) == -1) {
-                trackRow.style.display = 'none';
-            } else {
-                trackRow.style.display = '';
-                trackLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
+            if (trackLabel && trackId && tracks[trackId]) {
+                const { key, bpm } = tracks[trackId];
+                const camelot = beatportKeyToCamelotKey[key];
+
+                if (showKeys && showKeys.indexOf(camelot) == -1) {
+                    // hide rows that are filtered out
+                    trackRow.style.display = 'none';
+                } else {
+                    trackRow.style.display = '';
+                    trackLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
+                }
             }
-        }
+        });
+
+        // tag that we've labelled the list so that we can see when it gets reloaded
+        trackList.dataset.labeled = 'labeled';
     });
 
     // Top 10s
@@ -228,12 +241,8 @@ const update = () => {
         const rowElement   = topTenLabel.parentNode.parentNode;
         const trackId      = rowElement.dataset.ecId;
         const { key, bpm } = tracks[trackId];
-        topTenLabel.innerHTML = `<div>${bpm}</div><div>${beatportKeyToCamelotKey[key]}</div>`;
-    });
-
-    // tag that we've labelled the list so that we can see when it gets reloaded
-    document.querySelectorAll('ul.bucket-items').forEach(trackList => {
-        trackList.dataset.labeled = 'labeled';
+        const camelot      = beatportKeyToCamelotKey[key];
+        topTenLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
     });
 };
 
