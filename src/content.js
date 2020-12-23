@@ -42,29 +42,31 @@ const myLog = (...args) => console.log.apply(console, ['CamelotDJ:'].concat(args
 // ['', 'hold-bin']
 // ['', 'genre', 'techno', '6', 'top-100']
 
-const urlIsTop100 = () => {
-    const sp = window.location.pathname.split('/');
-    return sp.length >= 5 && sp[4] === 'top-100';
+const pathMathches = wildcardPath => {
+    const splitPath = window.location.pathname.split('/');
+    const splitWild = wildcardPath.split('/');
+    if (splitPath.length < splitWild.length) return false;
+    for (const seg in splitWild) {
+        if (splitWild[seg] !== '*' && splitWild[seg] !== splitPath[seg]) return false;
+    }
+    return true;
 }
 
-const getGenreNum = () => window.location.pathname.split('/')[3];
-
-const urlIsMainCart = () => {
-    const sp = window.location.pathname.split('/');
-    return sp.length >= 3 && sp[1] === 'cart' && sp[2] === 'cart';
+const getGenreNumberSeg = () => {
+    const splitPath = window.location.pathname.split('/');
+    if (splitPath.length < 4 || splitPath[1] !== 'genre') return null;
+    return splitPath[3];
 }
 
-const urlIsCustomCart = () => {
-    const sp = window.location.pathname.split('/');
-    return sp.length >= 3 && sp[1] === 'cart' && sp[2] !== 'cart';
-}
+const urlIsTop100 = () => pathMathches('/genre/*/*/top-100');
 
-const urlIsHoldBin = () => {
-    const sp = window.location.pathname.split('/');
-    return sp.length >= 2 && sp[1] === 'hold-bin';
-}
+const urlIsMainCart = () => pathMathches('/cart/cart');
 
+const urlIsCustomCart = () => pathMathches('/cart/*') && !urlIsMainCart();
 
+const urlIsHoldBin = () => pathMathches('/hold-bin');
+
+const urlIsSearchPage = () => pathMathches('/search/tracks');
 
 // convert key dataset to string -- note that the dataset stringifies everything
 const keyStr = datasetObj => datasetObj.keyNum + (datasetObj.minor.toString() === 'true' ? 'A' : 'B');
@@ -182,9 +184,15 @@ const selectKey = datasetObj => {
 };
 
 const update = () => {
+    if (urlIsTop100()) myLog('URL is a Top 100 page.');
+    if (urlIsMainCart()) myLog('URL is the Main Cart.');
+    if (urlIsCustomCart()) myLog('URL is a custom cart.');
+    if (urlIsHoldBin()) myLog('URL is the Hold Bin.');
+    if (urlIsSearchPage()) myLog('URL is a search result track list.');
+
     // Set/clear selection class on the top-100 genre link bar
     for (gNum of Object.keys(genreLinks)) {
-        if (urlIsTop100() && getGenreNum() === gNum) {
+        if (urlIsTop100() && getGenreNumberSeg() === gNum) {
             genreLinks[gNum].className = 'selected';
         } else {
             genreLinks[gNum].className = '';
@@ -193,7 +201,7 @@ const update = () => {
 
     // We only filter stuff when we're on a top-100 / hold-bin / custom cart
     let showKeys = null;
-    if (urlIsTop100() || urlIsHoldBin() || urlIsCustomCart()) {
+    if (urlIsTop100() || urlIsHoldBin() || urlIsCustomCart() || urlIsSearchPage()) {
         keySelectContainer.style.display = '';
         myLog('update() key selector visible');
         if (window.selectedKey) {
@@ -284,7 +292,6 @@ const loadTrackData = () => {
         } else {
             selectKey(null);
         }
-        myLog('loadTrackData update');
 
         update();
     }
