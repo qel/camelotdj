@@ -16,14 +16,15 @@ const beatportKeyToCamelotKey = {
 
 // prettier-ignore
 const linkGenres = {
-    'techno':      6,
-    'tech-house':  11,
-    'house':       5,
-    'deep-house':  12,
-    'bass-house':  91,
-    'melodic-h-t': 90,
-    'trance':      7,
-    'indie-dance': 37
+    'minimal':      14,
+    'techno':       6,
+    'tech-house':   11,
+    'house':        5,
+    'deep-house':   12,
+    'organic':      93,
+    'melodic':      90,
+    'trance':       7,
+    'indie-dance':  37
 };
 
 const HOLD_BIN_URL = 'https://www.beatport.com/hold-bin/tracks?per-page=150';
@@ -33,8 +34,52 @@ const POLLING_INTERVAL = 100;
 // logging
 const myLog = (...args) => console.log.apply(console, ['CamelotDJ:'].concat(args));
 
+// match URL
+
+// split path example:
+//
+// ['', 'cart', 'cart', 'BaSe64sTuFf==']
+// ['', 'hold-bin']
+// ['', 'genre', 'techno', '6', 'top-100']
+
+const urlIsTop100 = () => {
+    const splitPath = window.location.pathname.split('/');
+    return splitPath.length >= 5 && splitPath[4] === 'top-100';
+}
+
+const getGenreNum = () => window.location.pathname.split('/')[3];
+
+const urlIsMainCart = () => {
+    const splitPath = window.location.pathname.split('/');
+    return splitPath.length >= 3 && splitPath[1] === 'cart' && splitPath[2] === 'cart';
+}
+
+const urlIsHoldBin = () => {
+    const splitPath = window.location.pathname.split('/');
+    return splitPath.length >= 2 && splitPath[1] === 'hold-bin';
+}
+
+
+
 // convert key dataset to string -- note that the dataset stringifies everything
 const keyStr = datasetObj => datasetObj.keyNum + (datasetObj.minor.toString() === 'true' ? 'A' : 'B');
+
+// parse JSON track data in page scripts
+const parseScriptTracks = (scriptElement, searchText, propName) => {
+    if (scriptElement === null) return [];
+
+    const varPos = scriptElement.text.indexOf(searchText);
+    if (varPos === -1) return [];
+
+    const eqlPos = scriptElement.text.indexOf('=', varPos);
+    const objStr = scriptElement.text
+        .slice(eqlPos + 1)
+        .split('window.')[0]  // cut off the next window variable
+        .trim()
+        .slice(0, -1); // remove trailing semicolon
+    
+    return JSON.parse(objStr)[propName];
+}
 
 // build the key selector
 const keySelectButtons = [];
@@ -132,23 +177,16 @@ const selectKey = datasetObj => {
 };
 
 const update = () => {
-    // ['', 'cart', 'cart', 'BaSe64sTuFf==']
-    // ['', 'hold-bin']
-    // ['', 'genre', 'techno', '6', 'top-100']
-    const splitPath = window.location.pathname.split('/');
-    const hide = splitPath[1] !== 'hold-bin' && splitPath[4] !== 'top-100';
-
     // Hide the key selector thingy if we're not on a top-100 or the hold-bin
-    if (hide) {
-        myLog('update() hiding key selector ...');
-        keySelectContainer.style.display = 'none';
-    } else {
+    if (urlIsTop100() || urlIsHoldBin()) {
         keySelectContainer.style.display = '';
+    } else {
+        keySelectContainer.style.display = 'none';
     }
 
     // Set/clear selection class on the top-100 genre link bar
     for (gNum of Object.keys(genreLinks)) {
-        if (splitPath[1] === 'genre' && splitPath[3] === gNum && splitPath[4] === 'top-100') {
+        if (urlIsTop100() && getGenreNum() === gNum) {
             genreLinks[gNum].className = 'selected';
         } else {
             genreLinks[gNum].className = '';
@@ -157,7 +195,7 @@ const update = () => {
 
     // We only filter stuff when we're on a top-100 or the hold-bin and we have a key selected
     let showKeys = null;
-    if (window.selectedKey && !hide) {
+    if (window.selectedKey && (urlIsTop100() || urlIsHoldBin())) {
         showKeys = [window.selectedKey].concat(window.matchingKeys);
         myLog('update() filtering', showKeys);
     }
@@ -168,12 +206,14 @@ const update = () => {
     });
     // This is goofy because the hold-bin rows aren't as nested as the Top 100 rows.
     Array.from(document.getElementsByClassName('bucket-item track')).forEach(trackRow => {
-        const trackPlay = trackRow.getElementsByClassName('track-play')[0];
         const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
-        const id = trackPlay && trackPlay.dataset && trackPlay.dataset.id;
-        if (trackLabel && id && window.tracks[id]) {
-            const { key, bpm } = tracks[id];
+        const trackPlay  = trackRow.getElementsByClassName('track-play')[0];
+        const trackId    = trackPlay && trackPlay.dataset && trackPlay.dataset.id;
+
+        if (trackLabel && trackId && tracks[trackId]) {
+            const { key, bpm } = tracks[trackId];
             const camelot = beatportKeyToCamelotKey[key];
+
             if (showKeys && showKeys.indexOf(camelot) == -1) {
                 trackRow.style.display = 'none';
             } else {
@@ -185,12 +225,20 @@ const update = () => {
 
     // Top 10s
     Array.from(document.getElementsByClassName('top-ten-track-label')).forEach(topTenLabel => {
-        const rowElement = topTenLabel.parentNode.parentNode;
-        const id = rowElement.dataset.ecId;
-        const { key, bpm } = window.tracks[id];
+        const rowElement   = topTenLabel.parentNode.parentNode;
+        const trackId      = rowElement.dataset.ecId;
+        const { key, bpm } = tracks[trackId];
         topTenLabel.innerHTML = `<div>${bpm}</div><div>${beatportKeyToCamelotKey[key]}</div>`;
     });
+
+    // tag that we've labelled the list so that we can see when it gets reloaded
+    document.querySelectorAll('ul.bucket-items').forEach(trackList => {
+        trackList.dataset.labeled = 'labeled';
+    });
 };
+
+let trackDataPath = '';
+let tracks = {};
 
 // Beatport attaches track data to window.Playables.tracks, but the window object is sandboxed.
 // Beatport uses a lot of AJAX, so we can't just load the data script on DOMContentLoaded.
@@ -198,36 +246,57 @@ const update = () => {
 // And we don't want to be re-parsing the data script on an interval just to see when it changed.
 // So we just poll the current URL, and when it changes we parse the data script.
 // We also flag the script element after we parse it so we know if the new one hasn't loaded yet.
-const checkTrackData = () => {
-    // did navigation happen?
-    if (window.dataPathname !== window.location.pathname) {
-        const script = document.getElementById('data-objects');
-        // has the new datascript finished loading and replaced the last one we parsed?
-        if (script && script.dataset && typeof script.dataset.parsed === 'undefined') {
-            const varPos = script.text.indexOf('window.Playables');
-            const eqlPos = script.text.indexOf('=', varPos);
-            const objStr = script.text
-                .slice(eqlPos + 1)
-                .split('window.')[0]  // cut off the next window variable
-                .trim()
-                .slice(0, -1); // remove trailing ;
-            window.tracks = Object.fromEntries(JSON.parse(objStr).tracks.map(t => [t.id, t]));
-            // it worked?
-            if (window.tracks) {
-                script.dataset.parsed = 'parsed';
-                myLog(Object.keys(window.tracks).length, 'tracks loaded.');
-                const keyNum = window.localStorage.getItem('camelotdj.keyNum');
-                const minor = window.localStorage.getItem('camelotdj.minor');
-                if (keyNum && minor) {
-                    selectKey({ keyNum, minor });
-                } else {
-                    selectKey(null);
-                }
-                update();
+const loadTrackData = () => {
+    const script = document.getElementById('data-objects');
+    if (script === null) return;
+
+    // has the new datascript finished loading and replaced the last one we parsed?
+    if (typeof script.dataset.parsed === 'undefined') {
+        const playableTracks = parseScriptTracks(script, 'window.Playables', 'tracks');
+
+        trackDataPath = window.location.pathname;
+        tracks = Object.fromEntries(playableTracks.map(t => [t.id, t]));
+
+        script.dataset.parsed = 'parsed'; // flag it so we don't keep reloading the same data
+        myLog(playableTracks.length, 'playable tracks found.');
+
+        const cartTracks = parseScriptTracks(script.nextElementSibling, 'window.localCart', 'items');
+        cartTracks.forEach(t => {
+            if (!(t.id in tracks)) {
+                tracks[t.id] = t;
             }
+        })
+        myLog(cartTracks.length, 'cart tracks found.');
+
+        const keyNum = window.localStorage.getItem('camelotdj.keyNum');
+        const minor = window.localStorage.getItem('camelotdj.minor');
+        if (keyNum && minor) {
+            selectKey({ keyNum, minor });
+        } else {
+            selectKey(null);
         }
+        myLog('loadTrackData update');
+
+        update();
     }
 };
+
+const checkForUpdate = () => {
+    if (trackDataPath !== window.location.pathname) {
+        // we're not intercepting XHR calls, so we just manually poll the URL to see if we need to update
+        myLog('New URL. Loading track data.');
+        loadTrackData();
+    } else {
+        // track lists will repopulate after a second, so we need to check for that
+        document.querySelectorAll('ul.bucket-items').forEach(trackList => {
+            if (typeof trackList.dataset.labeled === 'undefined') {
+                myLog('label check update');
+
+                update();
+            }
+        });
+    }
+}
 
 // This fires when our extension initializes the first time -- so we attach our UI to the DOM here
 const loadHandler = e => {
@@ -235,7 +304,7 @@ const loadHandler = e => {
     document.getElementsByClassName('header-bg-wrap')[0].appendChild(mainContainer);
 
     // Start polling
-    setInterval(checkTrackData, POLLING_INTERVAL);
+    updateInterval = setInterval(checkForUpdate, POLLING_INTERVAL);
 };
 document.addEventListener('DOMContentLoaded', loadHandler);
 
