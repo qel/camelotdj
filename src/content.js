@@ -16,15 +16,16 @@ const beatportKeyToCamelotKey = {
 
 // prettier-ignore
 const linkGenres = {
-    'minimal':      14,
     'techno':       6,
+    'prog':         15,
+    'melodic':      90,
+    'indie':        37,
     'tech-house':   11,
     'house':        5,
-    'deep-house':   12,
     'organic':      93,
-    'melodic':      90,
+    'deep-house':   12,
     'trance':       7,
-    'indie':        37
+    'minimal':      14
 };
 
 const HOLD_BIN_URL = 'https://www.beatport.com/hold-bin/tracks?per-page=150';
@@ -243,20 +244,23 @@ const update = () => {
         // This is goofy because the hold-bin rows aren't as nested as the Top 100 rows.
         Array.from(trackList.getElementsByClassName('track')).forEach(trackRow => {
             const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
-            const trackId = trackRow.getElementsByClassName('track-play')[0].dataset.id;
 
-            if (trackLabel && tracks[trackId]) {
-                const { bpm, camelot } = tracks[trackId];
+            if (trackLabel) {
+                const trackId = trackRow.getElementsByClassName('track-play')[0].dataset.id;
 
-                if (filtering && matchingKeys.indexOf(camelot) == -1) {
-                    // hide rows that are filtered out
-                    trackRow.style.display = 'none';
+                if (tracks[trackId]) {
+                    const { bpm, camelot } = tracks[trackId];
+    
+                    if (filtering && matchingKeys.indexOf(camelot) == -1) {
+                        // hide rows that are filtered out
+                        trackRow.style.display = 'none';
+                    } else {
+                        trackRow.style.display = '';
+                        trackLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
+                    }
                 } else {
-                    trackRow.style.display = '';
-                    trackLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
+                    trackLabel.innerHTML = `<div>no track data</div>`;
                 }
-            } else {
-                trackLabel.innerHTML = `<div>no track data</div>`;
             }
         });
 
