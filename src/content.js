@@ -16,16 +16,19 @@ const beatportKeyToCamelotKey = {
 
 // prettier-ignore
 const linkGenres = {
+    'min•tech':     14,
+    'raw•tech':     92,
     'techno':       6,
-    'prog':         15,
-    'melodic':      90,
-    'indie':        37,
-    'tech-house':   11,
-    'house':        5,
-    'organic':      93,
-    'deep-house':   12,
+    'mel•h+t':      90,
+    'prog•hs':      15,
     'trance':       7,
-    'minimal':      14
+    'electro':      3,
+    'breaks':       9,
+    'ind•dnc':      37,
+    'tech•hs':      11,
+    'house':        5,
+    'orgnic•dt':    93,
+    'deep•hs':      12,
 };
 
 const HOLD_BIN_URL = 'https://www.beatport.com/hold-bin/tracks?per-page=150';
@@ -134,18 +137,21 @@ const parseScriptTracks = (scriptElement, assignedVarName, ...nestedVarNames) =>
     const scriptText = scriptElement.text;
     const objStart = scriptText.indexOf('{', scriptText.indexOf(assignedVarName) + assignedVarName.length);
     const objEnd = scriptText.indexOf('};', objStart) + 1;
-    let varData = JSON.parse(scriptText.slice(objStart, objEnd))
+    let varData = JSON.parse(scriptText.slice(objStart, objEnd));
     nestedVarNames.forEach(v => {
         varData = varData[v];
     })
     myLog(varData.length, assignedVarName, 'tracks found.');
     varData.forEach(track => {
         if (!(track.id in tracks)) {
-            tracks[track.id] = {
-                key: track.key,
-                bpm: track.bpm,
-                camelot: beatportKeyToCamelotKey[track.key]
-            };
+            if (track.bpm && track.key) {
+                tracks[track.id] = {
+                    key: track.key,
+                    bpm: track.bpm,
+                    camelot: beatportKeyToCamelotKey[track.key]
+                };
+            }
+            myLog(track.id, 'name:', track.name, 'mix:', track.mix, 'bpm:', track.bpm, 'key:', track.key);
         }
     });
     scriptElement.dataset.parsed = 'parsed'; // flag it so we don't keep reloading the same data
@@ -244,9 +250,8 @@ const update = () => {
         // This is goofy because the hold-bin rows aren't as nested as the Top 100 rows.
         Array.from(trackList.getElementsByClassName('track')).forEach(trackRow => {
             const trackLabel = trackRow.getElementsByClassName('buk-track-labels')[0];
-
             if (trackLabel) {
-                const trackId = trackRow.getElementsByClassName('track-play')[0].dataset.id;
+                const trackId = trackRow.dataset.ecId || trackRow.getElementsByClassName('track-play')[0].dataset.id;
 
                 if (tracks[trackId]) {
                     const { bpm, camelot } = tracks[trackId];
@@ -259,7 +264,9 @@ const update = () => {
                         trackLabel.innerHTML = `<div>${bpm}</div><div>${camelot}</div>`;
                     }
                 } else {
-                    trackLabel.innerHTML = `<div>no track data</div>`;
+                    trackLabel.style.whiteSpace = 'noWrap';
+                    trackLabel.style.color = '#8c8c8c';
+                    trackLabel.innerText = 'no track data';
                 }
             }
         });
