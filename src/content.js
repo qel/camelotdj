@@ -16,20 +16,40 @@ const beatportKeyToCamelotKey = {
 
 // prettier-ignore
 const linkGenres = {
-    'min•tech':     14,
-    'raw•tech':     92,
-    'techno':       6,
-    'mel•h+t':      90,
-    'prog•hs':      15,
-    'trance':       7,
-    'electro':      3,
-    'breaks':       9,
-    'ind•dnc':      37,
-    'tech•hs':      11,
-    'house':        5,
-    'orgnic•dt':    93,
-    'deep•hs':      12,
+    95: ['140-deep-dubstep-grime',          '140 / Deep Dubstep / Grime',           '140'],
+    89: ['afro-house',                      'Afro House',                           'afro•hs'],
+    85: ['bass-club',                       'Bass / Club',                          'bass•club'],
+    91: ['bass-house',                      'Bass House',                           'bass•hs'],
+    9:  ['breaks-breakbeat-uk-bass',        'Breaks / Breakbeat / UK Bass',         'breaks'],
+    39: ['dance-electro-pop',               'Dance / Electro Pop',                  'elec•pop'],
+    12: ['deep-house',                      'Deep House',                           'deep•hs'],
+    16: ['dj-tools',                        'DJ Tools',                             'dj•tools'],
+    1:  ['drum-bass',                       'Drum &amp; Bass',                      'd•&•b'],
+    18: ['dubstep',                         'Dubstep',                              'dubstep'],
+    94: ['electro-classic-detroit-modern',  'Electro (Classic / Detroit / Modern)', 'electro'],
+    3:  ['electronica',                     'Electronica',                          "elec'nica"],
+    81: ['funky-house',                     'Funky House',                          'funky•hs'],
+    8:  ['hard-dance-hardcore',             'Hard Dance / Hardcore',                'hardcore'],
+    2:  ['hard-techno',                     'Hard Techno',                          'hd•tech'],
+    5:  ['house',                           'House',                                'house'],
+    37: ['indie-dance',                     'Indie Dance',                          'ind•dnc'],
+    97: ['jackin-house',                    'Jackin House',                         'jakin•hs'],
+    96: ['mainstage',                       'Mainstage',                            'main•stg'],
+    90: ['melodic-house-techno',            'Melodic House &amp; Techno',           'mel•h+t'],
+    14: ['minimal-deep-tech',               'Minimal / Deep Tech',                  'minimal'],
+    50: ['nu-disco-disco',                  'Nu Disco / Disco',                     'nu•disco'],
+    93: ['organic-house-downtempo',         'Organic House / Downtempo',            'orgnic•dt'],
+    15: ['progressive-house',               'Progressive House',                    'prog•hs'],
+    13: ['psy-trance',                      'Psy-Trance',                           'psy•tra'],
+    11: ['tech-house',                      'Tech House',                           'tech•hs'],
+    6:  ['techno-peak-time-driving',        'Techno (Peak Time / Driving)',         'techno'],
+    92: ['techno-raw-deep-hypnotic',        'Techno (Raw / Deep / Hypnotic)',       'raw•tech'],
+    7:  ['trance',                          'Trance',                               'trance'],
+    38: ['trap-wave',                       'Trap / Wave',                          'trap'],
+    86: ['uk-garage-bassline',              'UK Garage / Bassline',                 'uk•garag']
 };
+
+const defaultGenres = [14, 92, 95, 6, 90, 3, 94, 9, 37, 11, 5, 12]
 
 const HOLD_BIN_URL = 'https://www.beatport.com/hold-bin/tracks?per-page=150';
 
@@ -46,19 +66,22 @@ const keyStr = datasetObj => datasetObj.keyNum + (datasetObj.minor.toString() ==
 
 
 // UI: build the key selector
-const keySelectButtons = [];
 const mainContainer = document.createElement('div');
-const keySelectContainer = document.createElement('div');
-const keySelectLabel = document.createElement('a');
-const keySelectGrid = document.createElement('div');
 mainContainer.className = 'camelotdj-main';
+
+const keySelectContainer = document.createElement('div');
 keySelectContainer.className = 'inner-container';
+mainContainer.appendChild(keySelectContainer);
+
+const keySelectLabel = document.createElement('a');
 keySelectLabel.className = 'key-label';
-keySelectGrid.className = 'key-grid';
 keySelectLabel.innerHTML = 'Camelot<strong>DJ</strong>';
 keySelectLabel.href = HOLD_BIN_URL;
 keySelectContainer.appendChild(keySelectLabel);
-keySelectContainer.appendChild(keySelectGrid);
+
+const keySelectButtons = [];  // we maniulate these below in selectKey()
+const keySelectGrid = document.createElement('div');
+keySelectGrid.className = 'key-grid';
 for (const minor of [true, false]) {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'key-row';
@@ -73,9 +96,14 @@ for (const minor of [true, false]) {
     }
     keySelectGrid.appendChild(rowDiv);
 }
-mainContainer.appendChild(keySelectContainer);
+keySelectContainer.appendChild(keySelectGrid);
 
 // UI: build row of links
+let myLinkGenres = window.localStorage.getItem('camelotdj.genres');
+if (myLinkGenres === null) {
+    myLinkGenres = defaultGenres
+}
+
 const genreLinks = {};
 const linkContainer = document.createElement('div');
 const linkLabel = document.createElement('div');
@@ -84,7 +112,8 @@ linkContainer.className = 'inner-container';
 linkLabel.className = 'link-label';
 linkRow.className = 'link-row';
 linkLabel.innerHTML = 'top<strong>100</strong>s';
-for (const [gName, gNum] of Object.entries(linkGenres)) {
+for (const gNum of myLinkGenres) {
+    const gName = linkGenres[gNum][2]
     const a = document.createElement('a');
     a.href = `https://www.beatport.com/genre/${gName}/${gNum}/top-100`;
     a.textContent = gName;
@@ -94,6 +123,11 @@ for (const [gName, gNum] of Object.entries(linkGenres)) {
 linkContainer.appendChild(linkLabel);
 linkContainer.appendChild(linkRow);
 mainContainer.appendChild(linkContainer);
+
+// UI: build link genre selector
+const genreSelectContainer = document.createElement('div');
+genreSelectContainer.className = 'inner-container';
+// TODO: implement custom genres
 
 
 
