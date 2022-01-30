@@ -101,7 +101,7 @@ keySelectContainer.appendChild(keySelectGrid);
 // UI: build row of links
 let myLinkGenres = window.localStorage.getItem('camelotdj.genres');
 if (myLinkGenres === null) {
-    myLinkGenres = defaultGenres
+    myLinkGenres = [...defaultGenres]
 }
 
 const genreLinks = {};
@@ -113,10 +113,10 @@ linkLabel.className = 'link-label';
 linkRow.className = 'link-row';
 linkLabel.innerHTML = 'top<strong>100</strong>s';
 for (const gNum of myLinkGenres) {
-    const gName = linkGenres[gNum][2]
+    const [gSlug, gName, gShort] = linkGenres[gNum]
     const a = document.createElement('a');
-    a.href = `https://www.beatport.com/genre/${gName}/${gNum}/top-100`;
-    a.textContent = gName;
+    a.href = `https://www.beatport.com/genre/${gSlug}/${gNum}/top-100`;
+    a.textContent = gShort;
     genreLinks[gNum] = a;
     linkRow.appendChild(a);
 }
@@ -128,6 +128,19 @@ mainContainer.appendChild(linkContainer);
 const genreSelectContainer = document.createElement('div');
 genreSelectContainer.className = 'inner-container';
 // TODO: implement custom genres
+
+const unselectedGenres = Object.keys(linkGenres).filter(g => !(myLinkGenres.includes(parseInt(g)))).sort(
+    (a, b) => {
+        if (linkGenres[a][1].toUpperCase() < linkGenres[b][1].toUpperCase()) {
+            return -1;
+        }
+        return 1;
+    }
+)
+
+
+
+
 
 
 
